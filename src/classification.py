@@ -321,17 +321,49 @@ plt.close()
 print("Saved confusion_matrix.png")
 
 # 2. Feature Importance from Random Forest
+LABEL_MAP = {
+    "implied_home_prob":  "Implied Home Prob.",
+    "implied_draw_prob":  "Implied Draw Prob.",
+    "implied_away_prob":  "Implied Away Prob.",
+    "h_goals_scored":     "Home Goals Scored",
+    "h_goals_conceded":   "Home Goals Conceded",
+    "h_goal_diff":        "Home Goal Diff.",
+    "h_shots":            "Home Shots",
+    "h_shots_on_target":  "Home Shots on Target",
+    "h_corners":          "Home Corners",
+    "h_fouls":            "Home Fouls",
+    "h_win_rate":         "Home Win Rate",
+    "h_home_win_rate":    "Home Win Rate (home)",
+    "h_rest_days":        "Home Rest Days",
+    "a_goals_scored":     "Away Goals Scored",
+    "a_goals_conceded":   "Away Goals Conceded",
+    "a_goal_diff":        "Away Goal Diff.",
+    "a_shots":            "Away Shots",
+    "a_shots_on_target":  "Away Shots on Target",
+    "a_corners":          "Away Corners",
+    "a_fouls":            "Away Fouls",
+    "a_win_rate":         "Away Win Rate",
+    "a_away_win_rate":    "Away Win Rate (away)",
+    "a_rest_days":        "Away Rest Days",
+    "h2h_home_win_rate":  "H2H Win Rate",
+}
+
 rf = results["Random Forest"]["model"]
 importances = rf.feature_importances_
-sorted_idx = np.argsort(importances)[::-1]
-fig, ax = plt.subplots(figsize=(12, 5))
-ax.bar(range(len(feature_cols)), importances[sorted_idx])
-ax.set_xticks(range(len(feature_cols)))
-ax.set_xticklabels([feature_cols[i] for i in sorted_idx], rotation=45, ha="right")
-ax.set_title("Feature Importances -- Random Forest")
-ax.set_ylabel("Importance")
+sorted_idx = np.argsort(importances)[::-1]  # descending for vertical bar
+sorted_labels = [LABEL_MAP.get(feature_cols[i], feature_cols[i]) for i in sorted_idx]
+sorted_vals   = importances[sorted_idx]
+
+fig, ax = plt.subplots(figsize=(14, 5))
+ax.bar(range(len(sorted_vals)), sorted_vals, color="#2c5f8a", edgecolor="white")
+ax.set_xticks(range(len(sorted_vals)))
+ax.set_xticklabels(sorted_labels, rotation=40, ha="right", fontsize=8.5)
+ax.set_ylabel("Importance", fontsize=10)
+ax.set_title("Random Forest Feature Importances", fontsize=11)
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
 plt.tight_layout()
-plt.savefig("../output/figures/feature_importance.png", dpi=150)
+plt.savefig("../output/figures/feature_importance.png", dpi=150, bbox_inches="tight")
 plt.close()
 print("Saved feature_importance.png")
 
