@@ -41,6 +41,3 @@ High fouls (>15), many cards (>3), high shots (>12)
 Outcome: upset (favorite lost based on odds)
 
 Use: Apriori algorithm to find rules like "High fouls + Away team → Red card likely"
-
-
-

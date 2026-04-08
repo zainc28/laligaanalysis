@@ -4,6 +4,7 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import os
@@ -214,19 +215,67 @@ baseline_acc = accuracy_score(y_test, baseline_preds)
 print(f"\nBaseline accuracy (always predict '{le.classes_[most_common]}'): {baseline_acc:.3f}")
 
 # ------------------------------------------------------------------------------------
+# IF-THEN Rules Classifier
+# Implements the "Using IF-THEN Rules for Classification" approach from lecture notes.
+# Rules are based on implied betting probabilities — the strongest signal in the data.
+# Thresholds are fitted by grid search over training data.
+# Label encoding (alphabetical): A=0, D=1, H=2
+# ------------------------------------------------------------------------------------
+class RuleBasedClassifier:
+    """
+    IF implied_home_prob >= home_thresh  THEN predict H (home win)
+    ELIF implied_away_prob >= away_thresh THEN predict A (away win)
+    ELSE                                  predict D (draw)
+    """
+    def __init__(self):
+        self.home_thresh = 0.45
+        self.away_thresh = 0.38
+
+    def fit(self, X, y):
+        # Grid search over threshold pairs to maximise training accuracy
+        best_acc, best_h, best_a = -1, self.home_thresh, self.away_thresh
+        for h_t in np.arange(0.30, 0.65, 0.05):
+            for a_t in np.arange(0.25, 0.55, 0.05):
+                preds = self._apply(X, h_t, a_t)
+                acc = (preds == y).mean()
+                if acc > best_acc:
+                    best_acc, best_h, best_a = acc, h_t, a_t
+        self.home_thresh = best_h
+        self.away_thresh = best_a
+        print(f"  IF-THEN Rules fitted: home_thresh={best_h:.2f}, away_thresh={best_a:.2f}")
+        return self
+
+    def predict(self, X):
+        return self._apply(X, self.home_thresh, self.away_thresh)
+
+    def _apply(self, X, home_thresh, away_thresh):
+        implied_home = X[:, 0]   # implied_home_prob
+        implied_away = X[:, 2]   # implied_away_prob
+        preds = np.where(
+            implied_home >= home_thresh, 2,          # H
+            np.where(implied_away >= away_thresh, 0, # A
+                     1)                               # D
+        )
+        return preds
+
+
+# ------------------------------------------------------------------------------------
 # Train Models
 # class_weight='balanced' makes models try to predict draws instead of ignoring them
 # ------------------------------------------------------------------------------------
 models = {
     "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42, class_weight="balanced"),
+    "Naive Bayes":         GaussianNB(),
     "Decision Tree":       DecisionTreeClassifier(max_depth=5, random_state=42, class_weight="balanced"),
     "Random Forest":       RandomForestClassifier(n_estimators=100, random_state=42, class_weight="balanced"),
+    "IF-THEN Rules":       RuleBasedClassifier(),
 }
 
 results = {}
 for name, model in models.items():
-    X_tr = X_train_scaled if name == "Logistic Regression" else X_train
-    X_te = X_test_scaled  if name == "Logistic Regression" else X_test
+    uses_scaled = name in ("Logistic Regression", "Naive Bayes")
+    X_tr = X_train_scaled if uses_scaled else X_train
+    X_te = X_test_scaled  if uses_scaled else X_test
 
     model.fit(X_tr, y_train)
     preds = model.predict(X_te)
@@ -287,10 +336,11 @@ plt.close()
 print("Saved feature_importance.png")
 
 # 3. Model Accuracy Comparison
-fig, ax = plt.subplots(figsize=(6, 4))
+fig, ax = plt.subplots(figsize=(10, 4))
 names = list(results.keys())
 accs  = [results[n]["accuracy"] for n in names]
-bars = ax.bar(names, accs, color=["#4C72B0", "#DD8452", "#55A868"])
+colors = ["#4C72B0", "#C44E52", "#DD8452", "#55A868", "#8172B2"]
+bars = ax.bar(names, accs, color=colors[:len(names)])
 ax.axhline(baseline_acc, color="red", linestyle="--", label=f"Baseline ({baseline_acc:.2f})")
 ax.set_ylim(0, 1)
 ax.set_ylabel("Accuracy")
