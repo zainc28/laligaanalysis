@@ -1,43 +1,61 @@
-## Planning
+# La Liga Analytics
 
-# What it is 
+Predicting match outcomes and clustering team performance profiles across La Liga seasons 2018–2026.
 
-Scrape data, clean it, and process it
+📄 [Read the Full Report](LaLigaAnalytics.pdf)
 
-Analyze it - association rules, clustering, or classification methods. 
+---
 
-Draw insight from data including as match prediciton, play style classificaiton, red card prediction 
+## Overview
 
-Write a paper being thorough, organized and professional, should address methodology, findings and conclusion
+Two complementary analyses on 2,950 La Liga matches:
 
+- **Match Outcome Classification** — predict full-time result (H/D/A) using pre-match features and betting-implied probabilities
+- **Team Performance Clustering** — group all 28 clubs into performance tiers using K-Means on season-level stats
 
-# Analyzing
-Option A: Classification — Predict Match Outcome
-Target: FTR (H / D / A)
-Features to engineer:
+---
 
-Rolling averages (last 5 games): goals scored, goals conceded, shots, corners
-Home/away form: win rate at home vs away
-Head-to-head history between teams
-Rest days since last match (from Date column)
-Betting odds as implied probability: 1 / B365H
+## Results
 
-Methods: Decision Tree, Random Forest, or Logistic Regression
+### Outcome Distribution
 
-Option B: Clustering — Group Teams by Style
-Features per team (aggregated):
+![Outcome Distribution](output/figures/outcome_distribution.png)
 
-Avg shots per game, avg shots on target
-Avg fouls committed, avg cards received
-Avg corners, goal difference
-Home vs away scoring differential
+Home sides win ~46% of matches — the naïve baseline any model must beat.
 
-Methods: K-Means (try k=3–5), then interpret clusters as "attacking," "defensive," "balanced," etc.
+### Classification
 
-Option C: Association Rules — What predicts high-card matches?
-Discretize variables:
+Five models were tested on a chronological 80/20 split (no future leakage). The IF-THEN Rules classifier achieved the best accuracy by directly leveraging implied probabilities from Bet365 odds.
 
-High fouls (>15), many cards (>3), high shots (>12)
-Outcome: upset (favorite lost based on odds)
+| Model | Accuracy |
+|---|---|
+| Naïve Baseline (always Home) | 46.0% |
+| Logistic Regression | 51.9% |
+| Naive Bayes | 50.2% |
+| Decision Tree | 47.2% |
+| Random Forest | 53.7% |
+| **IF-THEN Rules** | **54.0%** |
 
-Use: Apriori algorithm to find rules like "High fouls + Away team → Red card likely"
+![Feature Importance](output/figures/feature_importance.png)
+
+Implied probabilities dominate. Rolling goal difference and win rate follow. Corners and fouls contribute almost nothing.
+
+![Confusion Matrix](output/figures/confusion_matrix.png)
+
+Draws are consistently the hardest class — a known property of football prediction.
+
+### Team Clustering
+
+K-Means (k=3) on standardized season averages, visualized with PCA:
+
+| Cluster | Profile | Notable Teams |
+|---|---|---|
+| 1 | Dominant — high goals, shots, 91% home win rate | Real Madrid, Barcelona, Atlético |
+| 2 | Weaker — low output, most fouls and yellow cards | Lower-table sides |
+| 3 | Mid-table — balanced across all metrics | Majority of the league |
+
+---
+
+## Stack
+
+Python · Pandas · Scikit-learn · NumPy · Matplotlib
